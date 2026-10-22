@@ -1,0 +1,10 @@
+# Computer Networks - Open Ended Lab Report
+
+### Q1: How did you make sure that a message sent while a new client was receiving the history was neither lost nor shown twice at that client? How did you decide the exact message location?
+**Answer:** The server locks its shared mutex to atomically snapshot the history log and send existing messages (`msg.seq > client_last_seq`), finishing with a `HISTORY_END` frame that marks the boundary. Any live message broadcasted concurrently is stamped with an incremental sequence number higher than the replayed history. The client prevents duplicates by checking incoming sequence numbers against its tracked state (`if (h.seq <= last_seq)`). The exact message location (ordering) is definitively decided by the central server's monotonic `global_seq` counter.
+
+### Q2: What happens to your server as the message history grows without limit? How would you limit it, and what would a newly joining client lose as a result?
+**Answer:** As the history grows, the server's history vector will consume an increasing amount of RAM, eventually risking memory exhaustion. To limit it, you could implement a rolling window or a maximum message capacity (e.g., retaining only the last 1,000 messages) or flush older logs to a file/database. As a result, a newly joining client would lose access to deep historical chat logs that exceed the retention window.
+
+### Q3: Which functions of your system depend on the central server? Without a server, how would peers agree on the order of messages, and from where would a newly joining peer obtain the history and the peer list?
+**Answer:** Message sequencing (`global_seq`), central history archiving, peer registry tracking, and clean join/leave notifications depend entirely on the central server. Without a server, peers would require a decentralized consensus protocol (such as Paxos, Raft, or vector clocks) to agree on global message ordering, and a peer-to-peer gossip protocol or direct state-transfer from active peers to fetch historical messages and active membership lists.
